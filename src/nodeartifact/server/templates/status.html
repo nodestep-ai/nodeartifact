@@ -1,0 +1,1 @@
+{% macro status_badge(label, kind) %}{% if kind %}<span class="nodestep-badge nodestep-badge-{{ kind }}">{{ label }}</span>{% else %}<span class="status">{{ label }}</span>{% endif %}{% endmacro %}

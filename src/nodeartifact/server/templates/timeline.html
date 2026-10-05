@@ -1,0 +1,15 @@
+<ol class="nodestep-timeline" aria-label="Spans of the trace">
+<li class="nodestep-timeline-head" aria-hidden="true">
+<span class="nodestep-timeline-name">Span</span>
+<span class="nodestep-timeline-meta">Tokens in / out</span>
+<span class="nodestep-timeline-duration">Duration</span>
+</li>
+{% for row in timeline.rows %}
+<li class="nodestep-timeline-row{% if row.span.status_code is error %} nodestep-timeline-failed{% elif row.span.span_id in page.paused_spans %} nodestep-timeline-paused{% elif row.span.input_tokens is not none or row.span.output_tokens is not none %} nodestep-timeline-model{% endif %}">
+<span class="nodestep-timeline-name">{% for _ in range(row.depth) %}<span class="nodestep-timeline-indent"></span>{% endfor %}<a href="{{ url_for('span_view', trace_id=trace.trace_id, span_id=row.span.span_id) }}">{{ row.span.name }}</a>{% if row.span.status_code is error %}<span class="nodestep-badge nodestep-badge-failed">Failed</span>{% elif row.span.span_id in page.paused_spans %}<span class="nodestep-badge nodestep-badge-paused">Paused</span>{% elif row.span.run_status == "stopped" %}<span class="nodestep-badge nodestep-badge-stopped">Stopped</span>{% endif %}{% if row.span.input_text and row.span.parent_span_id %}<span class="run-input">{{ row.span.input_text | shorten }}</span>{% endif %}{% if row.span.service_name != trace.service_name %}<span class="nodestep-tag">{{ row.span.service_name or "-" }}</span>{% endif %}</span>
+<span class="nodestep-timeline-meta">{% if row.span.input_tokens is not none or row.span.output_tokens is not none %}{{ row.span.input_tokens | count }} / {{ row.span.output_tokens | count }}{% endif %}</span>
+<span class="nodestep-timeline-duration">{{ row.span.duration_ns | duration }}</span>
+<svg class="nodestep-timeline-track" viewBox="0 0 1000 10" preserveAspectRatio="none" role="img" aria-label="Starts at {{ (row.span.start_ns - trace.start_ns) | offset }}, takes {{ row.span.duration_ns | duration }}"><rect class="nodestep-timeline-bar" x="{{ row.offset }}" y="0" width="{{ row.width }}" height="10"></rect></svg>
+</li>
+{% endfor %}
+</ol>

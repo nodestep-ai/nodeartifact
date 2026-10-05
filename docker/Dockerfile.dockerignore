@@ -1,0 +1,14 @@
+*
+!nodestep/pyproject.toml
+!nodestep/README.md
+!nodestep/LICENSE
+!nodestep/src
+!nodeartifact/pyproject.toml
+!nodeartifact/uv.lock
+!nodeartifact/README.md
+!nodeartifact/LICENSE
+!nodeartifact/src
+**/__pycache__
+**/*.py[oc]
+**/.env
+**/.env.*

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block search %}{% from "search.html" import search_form with context %}{{ search_form(search.text, url_for('trace_list')) }}{% endblock %}
+{% block content %}
+<h1>Traces</h1>
+<div class="trace-results" id="trace-results" data-live-url="{{ url_for('trace_list_live').include_query_params(q=search.text, after=last_row) }}" data-results-url="{{ url_for('trace_list_results') }}">
+{% include "trace_results.html" %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='traces.js') }}"></script>
+{% endblock %}

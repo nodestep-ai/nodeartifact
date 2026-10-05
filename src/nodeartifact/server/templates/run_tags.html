@@ -1,0 +1,1 @@
+{% if trace.resumed %} <span class="nodestep-tag nodestep-tag-wrap">resumed{% if trace.resume_text %}: {{ trace.resume_text | shorten }}{% endif %}</span>{% endif %}{% if trace.edit_of %} <span class="nodestep-tag nodestep-tag-wrap">edit of {{ trace.edit_of | shorten }}</span>{% endif %}{% if trace.after_stop %} <span class="nodestep-tag">after a stop</span>{% endif %}

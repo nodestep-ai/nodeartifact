@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "status.html" import status_badge %}
+{% block title %}{{ trace.input_preview or trace.name }}{% if trace.resumed %} (resumed{% if trace.resume_text %}: {{ trace.resume_text | shorten }}{% endif %}){% endif %} · nodeartifact{% endblock %}
+{% block head %}{% if view == "graph" %}<script src="{{ url_for('static', path='nodestep-data.js') }}"></script>
+{% endif %}{% endblock %}
+{% block content %}
+<nav aria-label="Breadcrumb"><ol class="nodestep-breadcrumbs"><li><a href="{{ url_for('trace_list') }}">Traces</a></li><li aria-current="page">trace <code>{{ trace.trace_id }}</code></li></ol></nav>
+<h1>{{ trace.input_text or trace.name }}{% include "run_tags.html" %}{% if trace.input_text %} <span class="root">{{ trace.name }}</span>{% endif %}</h1>
+<dl class="nodestep-facts">
+{% if trace.thread_id %}<div><dt>Thread</dt><dd><code>{{ trace.thread_id }}</code></dd></div>{% endif %}
+<div><dt>Service</dt><dd>{{ trace.service_name or "-" }}</dd></div>
+<div><dt>Status</dt><dd>{% if page.live %}<span class="nodestep-badge nodestep-badge-running" id="trace-status">Running</span>{% else %}{{ status_badge(trace | trace_status, trace | trace_status_class) }}{% endif %}</dd></div>
+{% if trace.resume_text %}<div><dt>Resumed with</dt><dd>{{ trace.resume_text }}</dd></div>{% endif %}
+{% if trace.edit_of %}<div><dt>Edit of</dt><dd>{{ trace.edit_of }}</dd></div>{% endif %}
+{% if trace.branch_id %}<div><dt>Branch</dt><dd><code>{{ trace.branch_id }}</code></dd></div>{% endif %}
+<div><dt>Started</dt><dd>{{ trace.start_ns | timestamp }}</dd></div>
+{% if page.live %}<div><dt>Duration</dt><dd id="trace-duration"{% if now_ns >= trace.start_ns %} data-elapsed-ms="{{ (now_ns - trace.start_ns) // 1000000 }}"{% endif %}>{{ (now_ns - trace.start_ns) | duration }}</dd></div>{% else %}<div><dt>Duration</dt><dd>{{ trace.duration_ns | duration }}</dd></div>{% endif %}
+<div><dt>Spans</dt><dd>{{ trace.span_count }}{% if trace.error_count %}, {{ trace.error_count }} with errors{% endif %}</dd></div>
+<div><dt>Tokens in / out</dt><dd>{{ trace.input_tokens | count }} / {{ trace.output_tokens | count }}</dd></div>
+</dl>
+{% if page.live %}
+<p class="nodestep-message nodestep-message-warning" id="trace-live-note">{% if view == "graph" %}This run is still going. New steps appear here as their spans arrive, and the page reloads when the run ends.{% else %}This run is still going. Reload the page for new spans, or open the Graph view to follow the run.{% endif %}</p>
+{% elif not trace.complete %}
+<p class="nodestep-hint">The root span of this trace has not been received. Spans whose parent is missing are shown at the top level.</p>
+{% endif %}
+{% if graph %}
+<nav aria-label="Trace views">
+<ul class="nodestep-tabs">
+<li><a class="nodestep-tab" href="{{ url_for('trace_view', trace_id=trace.trace_id) }}"{% if view == "graph" %} aria-current="page"{% endif %}>Graph</a></li>
+<li><a class="nodestep-tab" href="{{ url_for('trace_timeline', trace_id=trace.trace_id) }}"{% if view == "timeline" %} aria-current="page"{% endif %}>Timeline</a></li>
+</ul>
+</nav>
+{% endif %}
+{% if view == "graph" %}{% include "graph.html" %}{% else %}{% include "timeline.html" %}{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if view == "graph" %}
+{% if graph.source %}<script src="{{ mermaid_url }}" integrity="{{ mermaid_integrity }}" crossorigin="anonymous"></script>
+{% endif %}<script src="{{ url_for('static', path='trace.js') }}"></script>
+{% endif %}
+{% endblock %}

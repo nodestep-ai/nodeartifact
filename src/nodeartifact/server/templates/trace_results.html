@@ -1,0 +1,51 @@
+{% from "status.html" import status_badge %}
+{% if traces %}
+<div class="nodestep-table-wrap">
+<table class="nodestep-table nodestep-table-stack traces">
+<thead>
+<tr>
+<th>Trace</th>
+<th>Thread</th>
+<th>Service</th>
+<th>Status</th>
+<th class="nodestep-num">Spans</th>
+<th class="nodestep-num">Duration</th>
+<th>Started</th>
+<th class="nodestep-num">Input tokens</th>
+<th class="nodestep-num">Output tokens</th>
+</tr>
+</thead>
+<tbody>
+{% for trace in traces %}
+<tr data-trace="{{ trace.trace_id }}">
+<td class="name" data-label="Trace"><span><a {% if trace.input_text != trace.input_preview %}title="{{ trace.input_text }}" {% endif %}href="{{ url_for('trace_view', trace_id=trace.trace_id) }}">{{ trace.input_preview or trace.name }}</a>{% include "run_tags.html" %}{% if trace.input_preview %} <span class="root">{{ trace.name }}</span>{% endif %}{% if not trace.complete and not trace.running %} <span class="nodestep-tag">root span missing</span>{% endif %}</span></td>
+<td class="thread" data-label="Thread">{% if trace.thread_id %}<code title="{{ trace.thread_id }}">{{ trace.thread_id }}</code>{% else %}-{% endif %}</td>
+<td class="nodestep-nowrap" data-label="Service">{{ trace.service_name or "-" }}</td>
+<td class="nodestep-nowrap" data-label="Status">{{ status_badge(trace | trace_status, trace | trace_status_class) }}</td>
+<td class="nodestep-num" data-label="Spans">{{ trace.span_count }}</td>
+<td class="nodestep-num" data-label="Duration"{% if trace.running and now_ns >= trace.start_ns %} data-elapsed-ms="{{ (now_ns - trace.start_ns) // 1000000 }}"{% endif %}>{{ ((now_ns - trace.start_ns) if trace.running else trace.duration_ns) | duration }}</td>
+<td class="nodestep-nowrap" data-label="Started">{{ trace.start_ns | timestamp }}</td>
+<td class="nodestep-num" data-label="Input tokens">{{ trace.input_tokens | count }}</td>
+<td class="nodestep-num" data-label="Output tokens">{{ trace.output_tokens | count }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% if traces | length == limit %}
+<p class="nodestep-hint">Showing the {{ limit }} {{ "matching traces" if search.text else "traces" }} that started last.</p>
+{% elif searched %}
+<p class="nodestep-hint">Searched the {{ searched | count }} traces that started last.</p>
+{% endif %}
+{% elif search.text %}
+<div class="nodestep-empty">
+<h2 class="nodestep-empty-title">No traces match this search</h2>
+<p>Search looks at the title, root span, trace id, thread, service and status{% if searched %} of the {{ searched | count }} traces that started last{% endif %}.</p>
+<p><a class="nodestep-button nodestep-button-secondary" href="{{ url_for('trace_list') }}" data-clear-search>Clear the search</a></p>
+</div>
+{% else %}
+<div class="nodestep-empty">
+<h2 class="nodestep-empty-title">No traces yet</h2>
+<p>Send OTLP/HTTP traces to <code>{{ endpoint }}</code>, or run a nodestep graph wrapped with <code>nodeartifact.instrument(graph, tracer_provider=nodeartifact.configure("{{ url_for('trace_list') }}"))</code>.</p>
+</div>
+{% endif %}

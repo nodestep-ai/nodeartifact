@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: checks (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12", "3.13", "3.14"]
+        include:
+          - os: windows-latest
+            python-version: "3.13"
+          - os: macos-latest
+            python-version: "3.13"
+    defaults:
+      run:
+        working-directory: nodeartifact
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: nodeartifact
+          persist-credentials: false
+      - name: Check out nodestep next to nodeartifact
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: nodestep-ai/nodestep
+          ref: ${{ github.base_ref || github.ref_name }}
+          token: ${{ secrets.SIBLING_CHECKOUT_TOKEN || github.token }}
+          path: nodestep
+          persist-credentials: false
+      - name: Check out nodestep-stylesheet next to nodeartifact
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: nodestep-ai/nodestep-stylesheet
+          ref: ${{ github.base_ref || github.ref_name }}
+          token: ${{ secrets.SIBLING_CHECKOUT_TOKEN || github.token }}
+          path: nodestep-stylesheet
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.17"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
+      - name: Install
+        run: uv sync --locked --all-extras --no-install-package nodestep
+      - name: Install nodestep from the checkout next to nodeartifact
+        run: uv pip install -e ../nodestep
+      - name: Lint
+        run: uv run --no-sync ruff check .
+      - name: Format
+        run: uv run --no-sync ruff format --check .
+      - name: Type check
+        run: uv run --no-sync ty check .
+      - name: Test
+        run: uv run --no-sync pytest -q
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.17"
+          python-version: "3.12"
+          enable-cache: false
+      - name: Build
+        run: uv build
+      - name: Let git fetch the private nodestep-ai repositories
+        env:
+          TOKEN: ${{ secrets.SIBLING_CHECKOUT_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            git config --global url."https://x-access-token:${TOKEN}@github.com/nodestep-ai/".insteadOf "https://github.com/nodestep-ai/"
+          fi
+      - name: Install the wheel into a fresh venv and import it
+        run: |
+          uv venv "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv" dist/*.whl
+          "$RUNNER_TEMP/venv/bin/python" -c "import nodeartifact; print(nodeartifact.__version__)"

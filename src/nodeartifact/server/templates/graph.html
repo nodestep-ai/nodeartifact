@@ -1,0 +1,55 @@
+{% from "status.html" import status_badge %}
+{% from "data.html" import data_block, data_notes %}
+{% set page_url = url_for('trace_view', trace_id=trace.trace_id) %}
+{% macro step_badges(step) %}{% if step.status != "completed" %}{{ status_badge(step.status | capitalize, step.status) }}{% endif %}{% if step.failed_tools %}{{ status_badge("Tool error", "failed") }}{% endif %}{% endmacro %}
+<div class="trace-graph" id="trace-graph" data-live="{{ 'true' if page.live else 'false' }}" data-live-url="{{ url_for('trace_live', trace_id=trace.trace_id) }}?after={{ page.last_row }}" data-page-url="{{ page_url }}">
+<div class="trace-graph-diagram">
+{% if graph.source %}
+<pre class="mermaid nodestep-mermaid" id="trace-diagram">{{ graph.source }}</pre>
+<p class="nodestep-message nodestep-message-warning" id="trace-diagram-note" hidden>The diagram could not be drawn. The Mermaid script may be blocked or offline, or Mermaid could not render this graph. The steps still work.</p>
+{% if graph.borrowed %}<p class="nodestep-hint">This diagram comes from an earlier run of {{ graph.graph_name }}. This run sends its own diagram when it ends.</p>{% endif %}
+{% else %}
+<p class="nodestep-message nodestep-message-info">No diagram yet. A run sends its diagram when it ends, and no earlier run of this graph has one.</p>
+{% endif %}
+</div>
+<section class="nodestep-card trace-steps" aria-labelledby="trace-steps-title">
+<div class="trace-steps-head">
+<h2 class="nodestep-card-title" id="trace-steps-title">Steps</h2>
+<p class="nodestep-hint" id="trace-position" aria-live="polite">{% if page.live %}{{ graph.steps | length }} {{ "step has" if graph.steps | length == 1 else "steps have" }} finished so far. {{ "The highlighted node is running." if graph.current and graph.source else "The run is in progress." }}{% elif graph.steps %}All {{ graph.steps | length }} steps of the run.{% else %}No node has finished yet.{% endif %}</p>
+</div>
+<div class="nodestep-card-actions" id="trace-replay" hidden>
+<button class="nodestep-button nodestep-button-secondary nodestep-button-small" type="button" data-replay="first">First</button>
+<button class="nodestep-button nodestep-button-secondary nodestep-button-small" type="button" data-replay="previous">Previous</button>
+<button class="nodestep-button nodestep-button-primary nodestep-button-small" type="button" data-replay="play">Replay</button>
+<button class="nodestep-button nodestep-button-secondary nodestep-button-small" type="button" data-replay="next">Next</button>
+<button class="nodestep-button nodestep-button-secondary nodestep-button-small" type="button" data-replay="last">Last</button>
+</div>
+<ol class="nodestep-panel-list trace-step-list" id="trace-step-list">
+{% for step in graph.steps %}
+<li><a class="nodestep-panel-item" href="{{ page_url }}?step={{ step.number }}#trace-step-detail" data-step="{{ step.number }}"{% if detail and step.number == detail.step.number %} aria-current="true"{% endif %}><span class="nodestep-panel-item-line"><span class="trace-step-number">{{ step.number }}</span><span class="nodestep-panel-item-title">{{ step.node_name }}</span>{{ step_badges(step) }}<span class="nodestep-panel-item-time">{{ step.duration }}</span></span></a></li>
+{% endfor %}
+</ol>
+</section>
+<section class="nodestep-card trace-step-detail" id="trace-step-detail" aria-labelledby="trace-step-title"{% if not detail %} hidden{% endif %}>{% if detail %}
+<h2 class="nodestep-card-title" id="trace-step-title">Step {{ detail.step.number }} of {{ detail.total }}: {{ detail.step.node_name }}</h2>
+<p class="trace-step-facts" id="trace-step-facts">{{ status_badge(detail.step.status | capitalize, detail.step.status) }}<span>{{ detail.step.duration }}</span>{% if detail.step.failed_tools %}<span>Failed tool call{{ "s" if detail.step.failed_tools | length > 1 }}: {{ detail.step.failed_tools | join(", ") }}</span>{% endif %}<a href="{{ url_for('span_view', trace_id=trace.trace_id, span_id=detail.step.span_id) }}">Open the span</a></p>
+{% if detail.views %}
+<nav aria-label="Step values">
+<ul class="nodestep-tabs trace-step-views">
+{% for view in detail.views %}
+<li><a class="nodestep-tab" href="{{ page_url }}?step={{ detail.step.number }}&amp;view={{ view.name }}#trace-step-detail" data-view="{{ view.name }}"{% if view.name == detail.view %} aria-current="page"{% endif %}>{{ view.label }}</a></li>
+{% endfor %}
+</ul>
+</nav>
+{% for view in detail.views %}
+<div class="trace-step-view" data-view-panel="{{ view.name }}"{% if view.name != detail.view %} hidden{% endif %}>
+{{ data_notes(view.truncated, view.valid_json) }}
+{{ data_block(view.text, "the " ~ view.label | lower) }}
+</div>
+{% endfor %}
+{% else %}
+<p class="nodestep-hint">This step recorded no update and no state.</p>
+{% endif %}
+{% endif %}</section>
+</div>
+<script type="application/json" id="trace-graph-data">{{ graph.model_dump(mode="json") | tojson }}</script>

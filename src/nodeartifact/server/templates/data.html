@@ -1,0 +1,86 @@
+{% macro data_viewer(data, label) -%}
+<div class="nodestep-data" role="group" aria-label="{{ label }}"><div class="nodestep-data-toolbar"><input class="nodestep-input nodestep-data-search" type="search" placeholder="Search keys and values" aria-label="Search {{ label }}"><span class="nodestep-data-matches" aria-live="polite"></span>
+{%- for action, text in (("expand", "Expand all"), ("collapse", "Collapse all"), ("copy", "Copy JSON")) -%}
+<button class="nodestep-button nodestep-button-quiet nodestep-button-small" type="button" data-nodestep-data-action="{{ action }}">{{ text }}</button>
+{%- endfor -%}
+</div><div class="nodestep-data-tree">{{ data_value(data.value, 0) }}</div><pre class="nodestep-data-source">{{ data.text }}</pre></div>
+{%- endmacro %}
+
+{% macro data_value(value, depth, plain=false, shown=none) -%}
+{%- set kind = data_tree.kind(value) -%}
+{%- if kind == "messages" and plain -%}{%- set kind = "array" -%}{%- endif -%}
+{%- if kind == "messages" and depth < data_tree.max_depth -%}
+{%- set previews = data_tree.previews(value) -%}
+<ol class="nodestep-data-messages">{% for message in value %}{{ data_message(message, depth, previews[loop.index0]) }}{% endfor %}</ol>
+{%- elif kind == "object" -%}
+<ul class="nodestep-data-children">{% for key, item in value.items() %}{{ data_entry(key, "key", item, depth, plain, data_tree.shown_at(shown, key)) }}{% endfor %}</ul>
+{%- elif kind == "array" -%}
+<ol class="nodestep-data-children">{% for item in value %}{{ data_entry(loop.index0, "index", item, depth, plain, data_tree.shown_at(shown, loop.index0)) }}{% endfor %}</ol>
+{%- else -%}
+{{ data_leaf(value) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro data_entry(name, part, item, depth, plain, shown) -%}
+<li class="nodestep-data-entry"{% if shown is sameas true %} data-nodestep-data-echo{% endif %}>
+{%- if data_tree.kind(item) in ("messages", "object", "array") and depth < data_tree.max_depth -%}
+<details class="nodestep-data-node"{% if depth < data_tree.open_depth %} open{% endif %}><summary><span class="nodestep-data-{{ part }}">{{ name }}</span><span class="nodestep-data-size">{{ data_tree.size(item) }}</span></summary>{{ data_value(item, depth + 1, plain, shown) }}</details>
+{%- else -%}
+<span class="nodestep-data-{{ part }}">{{ name }}</span>{{ data_leaf(item) }}
+{%- endif -%}
+</li>
+{%- endmacro %}
+
+{% macro data_leaf(value) -%}
+{%- set token, text = data_tree.leaf(value) -%}
+<span class="nodestep-data-value nodestep-token-{{ token }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro data_message(message, depth, preview) -%}
+{%- set role = data_tree.role(message) -%}
+{%- set name = data_tree.name(message) -%}
+{%- set content = data_tree.content(message) -%}
+{%- set calls = data_tree.calls(message) -%}
+<li class="nodestep-data-message"><details class="nodestep-data-message-row"><summary class="nodestep-data-message-head"><span class="nodestep-data-role nodestep-data-role-{{ role }}">{{ role }}</span>{% if name %}<span class="nodestep-data-message-name">{{ name }}</span>{% endif %}
+{%- if preview.text or preview.calls -%}
+<span class="nodestep-data-preview">{% if preview.text %}<span class="nodestep-data-preview-line{% if preview.prose %} nodestep-data-preview-text{% endif %}{% if preview.short %} nodestep-data-preview-short{% endif %}">{{ preview.text }}</span>{% endif %}{% for line in preview.calls %}<span class="nodestep-data-preview-line">{{ line }}</span>{% endfor %}</span>
+{%- endif -%}
+</summary><div class="nodestep-data-message-body">
+{%- if content is string -%}
+<p class="nodestep-data-text">{{ content }}</p>
+{%- elif content is not none -%}
+{{ data_value(content, depth + data_tree.open_depth) }}
+{%- endif -%}
+{%- if calls -%}
+<ul class="nodestep-data-calls">{% for call in calls %}<li class="nodestep-data-call"><span class="nodestep-data-call-name">{{ call.name }}</span><span class="nodestep-data-call-arguments">{{ call.arguments }}</span></li>{% endfor %}</ul>
+{%- endif -%}
+<details class="nodestep-data-raw"><summary>JSON</summary>{{ data_value(message, depth + data_tree.open_depth, true, data_tree.shown(message)) }}</details></div></details></li>
+{%- endmacro %}
+
+{% macro data_block(text, label) -%}
+{%- set data = text | data_view -%}
+{%- if data -%}
+{{ data_viewer(data, label) }}
+{%- else -%}
+<div class="nodestep-code nodestep-code-wrap"><pre>{{ text }}</pre></div>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro data_cell(text, label) -%}
+{%- set data = text | data_view -%}
+{%- if data -%}
+{{ data_viewer(data, label) }}
+{%- else -%}
+<pre>{{ text }}</pre>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro data_notes(truncated, valid_json) -%}
+{%- if truncated and valid_json -%}
+<p class="nodestep-message nodestep-message-warning">Shortened to fit the size limit: the oldest items of its lists were dropped, so earlier messages are missing.</p>
+{%- elif truncated -%}
+<p class="nodestep-message nodestep-message-warning">Shortened to fit the size limit and cut, so it is not valid JSON and is shown as received.</p>
+{%- elif not valid_json -%}
+<p class="nodestep-message nodestep-message-info">This value is not valid JSON, so it is shown as received. It may have been truncated.</p>
+{%- endif -%}
+{%- endmacro %}

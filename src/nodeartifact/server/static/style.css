@@ -1,0 +1,198 @@
+:root {
+  --nodestep-content-width: 84rem;
+}
+
+h1 .root,
+.traces .root {
+  display: block;
+  font-size: var(--nodestep-text-sm);
+  font-weight: var(--nodestep-weight-regular);
+  color: var(--nodestep-color-text-muted);
+}
+
+h1 .nodestep-tag {
+  margin-left: var(--nodestep-space-2);
+  font-weight: var(--nodestep-weight-regular);
+  vertical-align: middle;
+}
+
+h2 {
+  font-size: var(--nodestep-text-md);
+}
+
+.status {
+  color: var(--nodestep-color-text-secondary);
+}
+
+.run-input {
+  color: var(--nodestep-color-text-muted);
+}
+
+.trace-results {
+  overflow-anchor: none;
+}
+
+.traces td {
+  vertical-align: middle;
+}
+
+.traces .name {
+  min-width: 14rem;
+  max-width: 28rem;
+  overflow-wrap: anywhere;
+}
+
+.traces .name .nodestep-tag {
+  margin-left: var(--nodestep-space-1);
+}
+
+.traces .thread {
+  white-space: nowrap;
+}
+
+.traces .thread code {
+  display: inline-block;
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.attributes th {
+  width: 30%;
+  font-weight: var(--nodestep-weight-regular);
+  overflow-wrap: anywhere;
+}
+
+.trace-graph {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  grid-template-rows: minmax(26rem, auto) auto;
+  gap: var(--nodestep-space-4);
+  align-items: stretch;
+}
+
+.trace-graph-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nodestep-space-2);
+  min-width: 0;
+}
+
+.trace-graph-diagram .nodestep-mermaid {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 12rem;
+}
+
+.trace-steps {
+  contain: size;
+  gap: var(--nodestep-space-2);
+}
+
+.trace-steps-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nodestep-space-1) var(--nodestep-space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.trace-step-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.trace-step-list .nodestep-panel-item {
+  padding-block: var(--nodestep-space-1);
+}
+
+.trace-step-list .nodestep-badge {
+  flex: none;
+}
+
+.trace-step-number {
+  flex: none;
+  min-width: 1.5rem;
+  font-weight: var(--nodestep-weight-strong);
+  font-variant-numeric: tabular-nums;
+  color: var(--nodestep-color-text-muted);
+}
+
+.trace-step-detail {
+  grid-column: 1 / -1;
+}
+
+.trace-step-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nodestep-space-1) var(--nodestep-space-4);
+  align-items: center;
+  font-size: var(--nodestep-text-sm);
+  color: var(--nodestep-color-text-secondary);
+}
+
+.trace-step-views {
+  margin: 0;
+}
+
+.nodestep-mermaid .trace-step-badge rect {
+  fill: var(--nodestep-color-surface) !important;
+  stroke: var(--nodestep-color-border-strong) !important;
+  stroke-width: 1px !important;
+}
+
+.nodestep-mermaid .trace-step-badge text {
+  font-size: 11px;
+  font-weight: var(--nodestep-weight-strong);
+  fill: var(--nodestep-color-text) !important;
+}
+
+.trace-graph[data-live="false"] .nodestep-mermaid .current {
+  animation: none;
+}
+
+@media (max-width: 56rem) {
+  .trace-graph {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .trace-steps {
+    contain: none;
+    max-height: 28rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .traces .name {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .traces .thread code {
+    max-width: 100%;
+  }
+
+  .attributes,
+  .attributes tbody,
+  .attributes tr,
+  .attributes th,
+  .attributes td {
+    display: block;
+  }
+
+  .attributes th {
+    width: auto;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .attributes td {
+    padding-top: var(--nodestep-space-1);
+  }
+}

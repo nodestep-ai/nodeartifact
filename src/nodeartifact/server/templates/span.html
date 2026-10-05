@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "status.html" import status_badge %}
+{% from "data.html" import data_block, data_cell, data_notes %}
+{% block title %}{{ span.name }} · nodeartifact{% endblock %}
+{% block head %}<script src="{{ url_for('static', path='nodestep-data.js') }}"></script>
+{% endblock %}
+{% block content %}
+{% macro attribute_table(rows, kind) %}
+<div class="nodestep-table-wrap">
+<table class="nodestep-table attributes{% if kind %} {{ kind }}{% endif %}">
+<tbody>
+{% for row in rows %}
+<tr><th scope="row"><code>{{ row.key }}</code>{% if row.truncated %} <span class="nodestep-tag">shortened</span>{% endif %}</th><td>{{ data_cell(row.text, row.key) }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endmacro %}
+<nav aria-label="Breadcrumb"><ol class="nodestep-breadcrumbs"><li><a href="{{ url_for('trace_list') }}">Traces</a></li><li><a href="{{ url_for('trace_view', trace_id=span.trace_id) }}">trace <code>{{ span.trace_id }}</code></a></li><li aria-current="page">span <code>{{ span.span_id }}</code></li></ol></nav>
+<h1>{{ span.name }}</h1>
+<dl class="nodestep-facts">
+<div><dt>Kind</dt><dd>{{ span.kind | kind }}</dd></div>
+<div><dt>Status</dt><dd>{% if run_status is not none %}{{ status_badge(run_status | capitalize, run_status) }}{% else %}{{ status_badge("Failed" if span.status_code is error else span.status_code | status, "failed" if span.status_code is error else "") }}{% endif %}{% if span.status_message %} {{ span.status_message }}{% endif %}</dd></div>
+<div><dt>Service</dt><dd>{{ span.resource.service_name or "-" }}</dd></div>
+<div><dt>Scope</dt><dd>{{ span.scope.name or "-" }}{% if span.scope.version %} {{ span.scope.version }}{% endif %}</dd></div>
+<div><dt>Started</dt><dd>{{ span.start_ns | timestamp }}</dd></div>
+<div><dt>Duration</dt><dd>{{ span.duration_ns | duration }}</dd></div>
+<div><dt>Parent</dt><dd>{% if span.parent_span_id %}<a href="{{ url_for('span_view', trace_id=span.trace_id, span_id=span.parent_span_id) }}"><code>{{ span.parent_span_id }}</code></a>{% else %}none{% endif %}</dd></div>
+</dl>
+{% if groups.truncated %}
+<p class="nodestep-message nodestep-message-warning">Some values were shortened before they were sent: {% for key in groups.truncated %}<code>{{ key }}</code>{{ ", " if not loop.last else "." }}{% endfor %}</p>
+{% endif %}
+{% for view in groups.state %}
+<section class="nodestep-section state">
+<h2><code>{{ view.key }}</code>{% if view.truncated %} <span class="nodestep-tag">shortened</span>{% endif %}</h2>
+{{ data_notes(view.truncated, view.valid_json) }}
+{{ data_block(view.text, view.key) }}
+</section>
+{% endfor %}
+{% if groups.gen_ai %}
+<section class="nodestep-section">
+<h2>GenAI attributes</h2>
+{{ attribute_table(groups.gen_ai, "gen-ai") }}
+</section>
+{% endif %}
+{% if groups.nodestep %}
+<section class="nodestep-section">
+<h2>nodestep attributes</h2>
+{{ attribute_table(groups.nodestep, "nodestep") }}
+</section>
+{% endif %}
+{% if groups.other %}
+<section class="nodestep-section">
+<h2>{{ "Other attributes" if groups.grouped else "Attributes" }}</h2>
+{{ attribute_table(groups.other, "") }}
+</section>
+{% elif groups.empty %}
+<section class="nodestep-section">
+<h2>Attributes</h2>
+<p class="nodestep-hint">None.</p>
+</section>
+{% endif %}
+<section class="nodestep-section">
+<h2>Events</h2>
+{% if span.events %}
+<div class="nodestep-table-wrap">
+<table class="nodestep-table events">
+<thead><tr><th class="nodestep-num">At</th><th>Name</th><th>Attributes</th></tr></thead>
+<tbody>
+{% for event in span.events %}
+<tr>
+<td class="nodestep-num">{{ (event.time_ns - span.start_ns) | offset }}</td>
+<td class="name">{{ event.name }}</td>
+<td>{% if event.attributes %}<dl class="nodestep-pairs">{% for key, value in event.attributes | dictsort %}<dt><code>{{ key }}</code></dt><dd>{{ data_cell(value | attribute, key) }}</dd>{% endfor %}</dl>{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<p class="nodestep-hint">None.</p>
+{% endif %}
+</section>
+<section class="nodestep-section">
+<h2>Resource</h2>
+<div class="nodestep-table-wrap">
+<table class="nodestep-table attributes">
+<tbody>
+{% for key, value in span.resource.attributes | dictsort %}
+<tr><th scope="row"><code>{{ key }}</code></th><td>{{ data_cell(value | attribute, key) }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{% endblock %}
